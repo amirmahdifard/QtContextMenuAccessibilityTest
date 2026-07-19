@@ -28,7 +28,8 @@ public:
 
         if (settings.value("AppsUseLightTheme", -1).toUInt() == 0)
         {
-setStyle(QStyleFactory::create("Windows"));
+setStyle(QStyleFactory::create("Fusion"));
+setPalette(QApplication::style()->standardPalette());
         }
     }
 };
