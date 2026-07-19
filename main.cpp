@@ -1,15 +1,66 @@
 #include <QApplication>
 #include <QContextMenuEvent>
-#include <QHBoxLayout>
+#include <QDebug>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMainWindow>
 #include <QMenu>
+#include <QPalette>
+#include <QSettings>
+#include <QStandardItem>
 #include <QStandardItemModel>
+#include <QStyleFactory>
 #include <QTableView>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <vector>
+
+class MyQApplication : public QApplication
+{
+public:
+    MyQApplication(int& argc, char** argv)
+        : QApplication(argc, argv)
+    {
+        // This is copied from TeamTalk.
+        QSettings settings(
+            "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+            QSettings::NativeFormat);
+
+        if (settings.value("AppsUseLightTheme", -1).toUInt() == 0)
+        {
+            setStyle(QStyleFactory::create("Fusion"));
+
+            QPalette darkPalette;
+            QColor darkColor(45, 45, 45);
+            QColor disabledColor(127, 127, 127);
+
+            darkPalette.setColor(QPalette::Window, darkColor);
+            darkPalette.setColor(QPalette::WindowText, Qt::white);
+            darkPalette.setColor(QPalette::Base, QColor(18, 18, 18));
+            darkPalette.setColor(QPalette::AlternateBase, darkColor);
+            darkPalette.setColor(QPalette::ToolTipBase, Qt::white);
+            darkPalette.setColor(QPalette::ToolTipText, Qt::white);
+            darkPalette.setColor(QPalette::Text, Qt::white);
+            darkPalette.setColor(QPalette::Disabled, QPalette::Text, disabledColor);
+            darkPalette.setColor(QPalette::Button, darkColor);
+            darkPalette.setColor(QPalette::ButtonText, Qt::white);
+            darkPalette.setColor(QPalette::Disabled, QPalette::ButtonText, disabledColor);
+            darkPalette.setColor(QPalette::BrightText, Qt::red);
+            darkPalette.setColor(QPalette::Link, QColor(42, 130, 218));
+            darkPalette.setColor(QPalette::Highlight, QColor(42, 130, 218));
+            darkPalette.setColor(QPalette::HighlightedText, Qt::black);
+            darkPalette.setColor(QPalette::Disabled, QPalette::HighlightedText, disabledColor);
+
+            setPalette(darkPalette);
+
+            setStyleSheet(
+                "QToolTip { color: #ffffff; "
+                "background-color: #2a82da; "
+                "border: 1px solid white; }");
+        }
+    }
+};
 
 class TestWindow : public QMainWindow
 {
@@ -23,27 +74,24 @@ public:
         auto* layout = new QVBoxLayout(central);
 
         layout->addWidget(new QLabel(
-            "There are three independent tests.\n\n"
-            "1. Right-click anywhere in the empty area below this text.\n"
-            "2. Right-click inside the table.\n"
-            "3. Focus the edit box and press the Applications key or Shift+F10.\n\n"
-            "With NVDA, disabled menu items should receive focus and be announced as unavailable."
-        ));
+            "Test 1: Right-click the empty area.\n"
+            "Test 2: Right-click inside the table.\n"
+            "Test 3: Focus the edit box and press the Applications key.\n\n"
+            "Disabled items should receive keyboard focus and NVDA should announce 'unavailable'."));
 
         m_table = new QTableView(this);
 
         auto* model = new QStandardItemModel(5, 2, this);
         model->setHorizontalHeaderLabels({"Name", "Value"});
 
-        for (int r = 0; r < 5; ++r)
+        for (int i = 0; i < 5; ++i)
         {
-            model->setItem(r, 0, new QStandardItem(QString("Item %1").arg(r + 1)));
-            model->setItem(r, 1, new QStandardItem(QString::number(r + 1)));
+            model->setItem(i, 0, new QStandardItem(QString("Item %1").arg(i + 1)));
+            model->setItem(i, 1, new QStandardItem(QString::number(i + 1)));
         }
 
         m_table->setModel(model);
         m_table->horizontalHeader()->setStretchLastSection(true);
-
         m_table->setContextMenuPolicy(Qt::CustomContextMenu);
 
         connect(m_table,
@@ -54,39 +102,31 @@ public:
         layout->addWidget(m_table);
 
         m_edit = new QLineEdit(this);
-        m_edit->setPlaceholderText(
-            "Press the Applications key or Shift+F10 here.\n"
-            "Qt's built-in Edit context menu should appear.");
-
-        m_edit->setText("Select some text here and invoke the context menu.");
-
+        m_edit->setText("Right click or press the Applications key here.");
         layout->addWidget(m_edit);
 
         setCentralWidget(central);
     }
 
 protected:
-    void contextMenuEvent(QContextMenuEvent* event) override
+    void contextMenuEvent(QContextMenuEvent* e) override
     {
-        // Ignore right-clicks that belong to child widgets.
-        if (childAt(event->pos()))
+        if (childAt(e->pos()))
         {
-            QMainWindow::contextMenuEvent(event);
+            QMainWindow::contextMenuEvent(e);
             return;
         }
 
         QMenu menu(this);
 
-        QAction* enabled = menu.addAction("Enabled");
-        Q_UNUSED(enabled);
+        menu.addAction("Enabled");
 
         QAction* disabled = menu.addAction("Disabled");
         disabled->setEnabled(false);
 
-        QAction* enabled2 = menu.addAction("Another Enabled");
-        Q_UNUSED(enabled2);
+        menu.addAction("Another Enabled");
 
-        menu.exec(event->globalPos());
+        menu.exec(e->globalPos());
     }
 
 private:
@@ -94,17 +134,13 @@ private:
     {
         QMenu menu(this);
 
-        QAction* open = menu.addAction("Open");
-        Q_UNUSED(open);
+        menu.addAction("Open");
 
         QAction* disabled = menu.addAction("Disabled");
         disabled->setEnabled(false);
 
-        QAction* rename = menu.addAction("Rename");
-        Q_UNUSED(rename);
-
-        QAction* deleteItem = menu.addAction("Delete");
-        Q_UNUSED(deleteItem);
+        menu.addAction("Rename");
+        menu.addAction("Delete");
 
         menu.exec(m_table->viewport()->mapToGlobal(point));
     }
@@ -115,7 +151,29 @@ private:
 
 int main(int argc, char* argv[])
 {
-    QApplication app(argc, argv);
+#ifdef Q_OS_WIN
+
+    // Exactly what TeamTalk does.
+    std::vector<const char*> argv2;
+
+    for (int i = 0; i < argc; ++i)
+        argv2.push_back(argv[i]);
+
+    argv2.push_back("-platform");
+    argv2.push_back("windows:altgr");
+
+    argc = static_cast<int>(argv2.size());
+
+    MyQApplication app(argc, const_cast<char**>(argv2.data()));
+
+#else
+
+    MyQApplication app(argc, argv);
+
+#endif
+
+    qDebug() << "Qt version:" << qVersion();
+    qDebug() << "Style:" << app.style()->metaObject()->className();
 
     TestWindow w;
     w.show();
