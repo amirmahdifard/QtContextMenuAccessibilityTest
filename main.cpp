@@ -22,6 +22,13 @@ public:
     MyQApplication(int& argc, char** argv)
         : QApplication(argc, argv)
     {
+        QSettings settings(
+            "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+            QSettings::NativeFormat);
+
+        if (settings.value("AppsUseLightTheme", -1).toUInt() == 0)
+        {
+        }
     }
 };
 
