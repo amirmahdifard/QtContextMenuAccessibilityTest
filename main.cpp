@@ -151,26 +151,7 @@ private:
 
 int main(int argc, char* argv[])
 {
-#ifdef Q_OS_WIN
-
-    // Exactly what TeamTalk does.
-    std::vector<const char*> argv2;
-
-    for (int i = 0; i < argc; ++i)
-        argv2.push_back(argv[i]);
-
-    argv2.push_back("-platform");
-    argv2.push_back("windows:altgr");
-
-    argc = static_cast<int>(argv2.size());
-
-    MyQApplication app(argc, const_cast<char**>(argv2.data()));
-
-#else
-
-    MyQApplication app(argc, argv);
-
-#endif
+MyQApplication app(argc, argv);
 
     qDebug() << "Qt version:" << qVersion();
     qDebug() << "Style:" << app.style()->metaObject()->className();
