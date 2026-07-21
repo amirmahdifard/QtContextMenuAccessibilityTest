@@ -17,22 +17,25 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: 6.6.3
-          arch: win64_mingw
+          arch: win64_msvc2019_64
           modules: ""
           cache: true
 
       - name: Configure CMake
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -G "MinGW Makefiles"
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022"
 
       - name: Build
         run: cmake --build build --config Release
 
-      - name: Deploy Qt application
+      - name: Prepare artifact
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifact
-          Copy-Item build\QtContextMenuAccessibilityTest.exe artifact\
+          Copy-Item build\Release\QtContextMenuAccessibilityTest.exe artifact\
 
+      - name: Deploy Qt application
+        shell: pwsh
+        run: |
           windeployqt `
             --release `
             --compiler-runtime `
